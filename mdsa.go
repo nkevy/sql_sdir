@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"database/sql"
 )
+import "database/sql"
 import _"github.com/go-sql-driver/mysql"
 func pathSep() string{
 	if runtime.GOOS == "windows" {
@@ -14,7 +14,7 @@ func pathSep() string{
 		return string('/')
 	}
 }
-func sql(fn) bool{
+func addsql(fn string) bool{
 	db,err:=sql.Open("mysql","user:pw@tcp(ip:port)/dbname")
 	if err!=nil{
 		fmt.Println("error: could not connect to sql database")
@@ -22,11 +22,12 @@ func sql(fn) bool{
 	}
 	defer db.Close()
 	stmt:= "INSERT INTO TREE (name) VALUES(?)"
-	err=db.Query(stmt,1,fn)
-	if err!={
+	_,err=db.Query(stmt,1,fn)
+	if err!=nil{
 		fmt.Println("error: cannot insert file into sql")
 		return false
 	}
+	return true
 }
 func main(){
 	if (len(os.Args)>1)&&os.Args[1:][0][0]!='/'&&os.Args[1:][0][0]!='\\'{
@@ -51,7 +52,7 @@ func main(){
 			fmt.Println("dir name exists")
 		}
 		os.Chmod(fn,0777)
-		sql(fn)
+		addsql(fn)
 	}else{
 		fmt.Println("usage: mdsa <dir name to be created>")
 	}

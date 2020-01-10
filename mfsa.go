@@ -2,52 +2,65 @@ package main;
 
 import(
 	"os"
-	"fmt"
+	"log"
 	"io/ioutil"
 	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
 )
-import _"github.com/go-sql-driver/mysql"
-
-func fcheck(filename string) bool{
-	ret,err:=os.Stat(filename)
-	if err!=nil{
-		return false;
+var (tag string)
+func fcheck(string check,Conn db) bool{
+	stm,err:=db.Query("SELECT * FROM tree WHERE tag =(?)")
+	err!=nil{
+		log.Fatal(err)
 	}
-	return !ret.IsDir();
+	defer stm.Close()
+	for stm.Next(){
+		err:=stm.Scan(&tag)
+		if err!=nil{
+			log.Fatal(err)
+		}
+		if check==tag {
+			return true
+		}
+	}
+	return false
 }
-func sql(fn) bool{
-	db,err:=sql.Open("mysql","user:pw@tcp(ip:port)/dbname")
-	if err!=nil{
-		fmt.Println("error: could not connect to sql database")
+func sql(tag string, Conn db) bool{
+	if err!=nil {
+		log.Fatal(err)
 		return false
 	}
 	defer db.Close()
-	stmt:= "INSERT INTO FILE (name) VALUES(?)"
-	err=db.Query(stmt,1,fn)
-	if err!={
-		fmt.Println("error: cannot insert file into sql")
+	err=db.Query("INSERT INTO FILE (name) VALUES(?)",1,tag)
+	if err!=nil{
+		log.Fatal(err)
 		return false
 	}
+	return true
 }
 func main(){
 	arg:=os.Args[1:]
 	if (len(arg)==0) || (len(arg)>1) {
-		fmt.Println("usage: mfsa <filename>")
+		fmt.Println("usage: mst <filename>")
 		return;
 	}
-	fn:=arg[0]
-	if ( (fn[len(fn)-1]=='\\') || (fn[len(fn)-1]=='/') ){
+	tag:=arg[0]
+	if ( (tag[len(tag)-1]=='\\') || (tag[len(tag)-1]=='/') ){
 		fmt.Println("error: cannot use / or \\ in filename")
 		return
 	}
-	if fcheck(fn){
-		fmt.Println("error: file exists")
+	if fcheck(tag){
+		fmt.Println("error: tag exists")
 		return
 	}
-	err := ioutil.WriteFile(fn,[]byte(""),os.ModePerm)
 	if err !=nil{
 		fmt.Println("error: file cannot be created check permissions")
 	}
 	os.Chmod(fn,0777)
-	sql(fn)
+	db,err := sql.Open("mysql","user:pw@tcp(ip:port)/dbname")
+	if err!=nil{
+		fmt.Println("error could not connnect to sql check address")
+		return
+	}
+	sql(fn,db)
 }
